@@ -7,7 +7,13 @@ import {
     GuildMember,
     GuildMemberResolvable,
     GuildTextBasedChannel,
+    InteractionDeferReplyOptions,
+    InteractionEditReplyOptions,
+    InteractionReplyOptions,
     Message,
+    MessageCreateOptions,
+    MessageEditOptions,
+    MessagePayload,
     PartialDMChannel,
     TextChannel,
     User,
@@ -60,16 +66,16 @@ export default class Context {
             this.args = args;
         }
     }
-    public async sendMessage(content: any): Promise<Message> {
+    public async sendMessage(content: string | InteractionReplyOptions | MessageCreateOptions | MessagePayload): Promise<Message> {
         if (this.isInteraction) {
-            this.msg = this.interaction?.reply(content);
+            this.msg = this.interaction?.reply(content as any);
             return this.msg;
         } else {
-            this.msg = await (this.message?.channel as TextChannel).send(content);
+            this.msg = await (this.message?.channel as TextChannel).send(content as any);
             return this.msg;
         }
     }
-    public async editMessage(content: any): Promise<Message> {
+    public async editMessage(content: string | InteractionEditReplyOptions | MessageEditOptions): Promise<Message> {
         if (this.isInteraction) {
             if (this.msg) this.msg = await this.interaction?.editReply(content);
             return this.msg;
@@ -78,20 +84,20 @@ export default class Context {
             return this.msg;
         }
     }
-    public async sendDeferMessage(content: any): Promise<Message> {
+    public async sendDeferMessage(content: string | InteractionDeferReplyOptions | MessageCreateOptions | MessagePayload): Promise<Message> {
         if (this.isInteraction) {
             this.msg = await this.interaction?.deferReply({ fetchReply: true });
             return this.msg;
         } else {
-            this.msg = await (this.message?.channel as TextChannel).send(content);
+            this.msg = await (this.message?.channel as TextChannel).send(content as any);
             return this.msg;
         }
     }
-    public async sendFollowUp(content: any): Promise<void> {
+    public async sendFollowUp(content: string | MessagePayload | InteractionReplyOptions | MessageCreateOptions): Promise<void> {
         if (this.isInteraction) {
-            await this.interaction?.followUp(content);
+            await this.interaction?.followUp(content as any);
         } else {
-            this.msg = await (this.message?.channel as TextChannel).send(content);
+            this.msg = await (this.message?.channel as TextChannel).send(content as any);
         }
     }
     public get deferred(): boolean | Promise<any> {

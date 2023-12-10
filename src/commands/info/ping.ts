@@ -1,4 +1,6 @@
 import { MistyBot, Command, Context } from "@/structures";
+import { User } from "discord.js";
+import { utils } from "@/utils";
 
 export default class Ping extends Command {
     constructor(client: MistyBot) {
@@ -42,10 +44,7 @@ export default class Ping extends Command {
                 inline: true
             }
           ])
-          .setFooter({
-            text: `Requisitado por ${ctx.author?.tag}`,
-            iconURL: (ctx.author as null as any).avatarURL({})
-          })
+          .setFooter(utils.requestedByFooter(ctx.author as User))
           .setTimestamp(Date.now())
 
           return await ctx.editMessage({content: '', embeds: [embed]})

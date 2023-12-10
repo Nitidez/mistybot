@@ -1,18 +1,54 @@
-import { Client, ClientOptions, Collection, EmbedBuilder, ApplicationCommandType, Routes, PermissionsBitField, REST, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord.js";
+import { Client, ClientOptions, Collection, EmbedBuilder, ApplicationCommandType, Routes, PermissionsBitField, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, ApplicationCommandData, GuildEmoji } from "discord.js";
 import { PrismaClient } from '@prisma/client'
 import { config } from "@/config";
-import logger from "@/utils/logger";
+import {logger} from "@/utils";
 import fs from 'fs'
 import path from 'path'
+import { LavalinkManager } from "lavalink-client";
 
 export default class MistyBot extends Client {
     public commands: Collection<string, any> = new Collection()
     public cooldown: Collection<string, any> = new Collection() 
+    public misty_emojis: Collection<keyof typeof config.emojis, GuildEmoji> = new Collection();
     public config = config
     public logger = logger
     public readonly color = config.color
     private body: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
     public prisma = new PrismaClient()
+    public defaultVolume = config.defaultVolume
+    public lavalink = new LavalinkManager({
+        nodes: [
+            {
+                authorization: config.LAVALINK.password,
+                host: config.LAVALINK.address,
+                port: config.LAVALINK.port,
+                id: 'default',
+                requestTimeout: 10000,
+                secure: config.LAVALINK.secure
+            }
+        ],
+        sendToShard: (guildId, payload) => this.guilds.cache.get(guildId)?.shard?.send(payload),
+        client: {
+            id: config.DISCORD_CLIENT_ID,
+            username: 'MistyBot'
+        },
+        autoSkip: true,
+        playerOptions: {
+            clientBasedPositionUpdateInterval: 150,
+            defaultSearchPlatform: "spotify",
+            volumeDecrementer: 0.75,
+            onDisconnect: {
+                autoReconnect: true,
+                destroyPlayer: false
+            },
+            onEmptyQueue: {
+                destroyAfterMs: 30_000
+            }
+        },
+        queueOptions: {
+            maxPreviousTracks: 25
+        }
+    })
 
     public constructor(options: ClientOptions) {
         super(options)
@@ -34,7 +70,20 @@ export default class MistyBot extends Client {
             this.logger.error('Unable to connect to the database.')
             this.logger.error(err)
         });
+        this.on('raw', d => {
+            this.lavalink.sendRawData(d)
+        })
         await this.login(token)
+        this.loadMistyEmojis()
+    }
+
+    private loadMistyEmojis(): void {
+        this.once('ready', () => {
+            for(const [k, v] of Object.entries(config.emojis)) {
+                const emj = this.emojis.cache.get(v)
+                this.misty_emojis.set(k as any, emj as any)
+            }
+        })
     }
 
     private loadCommands(): void {
@@ -49,28 +98,21 @@ export default class MistyBot extends Client {
                 command.category = dir;
                 this.commands.set(command.name, command);
                 if (command.slashCommand) {
-                    const data = {
+                    const data: ApplicationCommandData = {
                         name: command.name,
                         description: command.description.content,
                         type: ApplicationCommandType.ChatInput,
                         options: command.options ? command.options : null,
-                        name_localizations: command.nameLocalizations
-                            ? command.nameLocalizations
-                            : null,
-                        description_localizations: command.descriptionLocalizations
-                            ? command.descriptionLocalizations
-                            : null,
-                        default_member_permissions:
-                            command.permissions.user.length > 0 ? command.permissions.user : null,
+                        defaultMemberPermissions: command.permissions.user.length > 0 ? command.permissions.user : null
                     };
                     if (command.permissions.user.length > 0) {
                         const permissionValue = PermissionsBitField.resolve(
                             command.permissions.user
                         );
                         if (typeof permissionValue === 'bigint') {
-                            data.default_member_permissions = permissionValue.toString();
+                            data.defaultMemberPermissions = permissionValue.toString() as any;
                         } else {
-                            data.default_member_permissions = permissionValue;
+                            data.defaultMemberPermissions = permissionValue;
                         }
                     }
                     const json = JSON.stringify(data);
@@ -105,6 +147,9 @@ export default class MistyBot extends Client {
                 const evt = new event(this, file)
 
                 switch (dir) {
+                    case 'lavalink':
+                        this.lavalink.on(evt.name, (...args: any) => evt.run(...args))
+                    break;
                     default:
                         this.on(evt.name, (...args) => evt.run(...args))
                     break;

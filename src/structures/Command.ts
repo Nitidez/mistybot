@@ -1,4 +1,4 @@
-import { ApplicationCommandOption, PermissionResolvable } from "discord.js";
+import { ApplicationCommandOption, AutocompleteInteraction, PermissionResolvable } from "discord.js";
 import {MistyBot} from "@/structures";
 
 export default class Command {
@@ -40,8 +40,12 @@ export default class Command {
         this.category = options.category || 'general';
     }
 
-        public async run(_client: MistyBot, _message: any, _args: string[]): Promise<any> {
-            return await Promise.resolve()
+    public async run(_client: MistyBot, _message: any, _args: string[]): Promise<any> {
+        return await Promise.resolve()
+    }
+
+    public async autocomplete(_client: MistyBot, _interaction: AutocompleteInteraction): Promise<any> {
+        return await Promise.resolve()
     }
 
 }

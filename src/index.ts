@@ -6,7 +6,8 @@ const client = new MistyBot({
         "Guilds",
         "GuildMessages",
         "DirectMessages",
-        "MessageContent"
+        "MessageContent",
+        "GuildVoiceStates"
     ]
 });
 

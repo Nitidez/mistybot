@@ -1,6 +1,5 @@
 import {
     AutocompleteInteraction,
-    ChannelType,
     Collection,
     CommandInteraction,
     GuildMember,
@@ -16,7 +15,7 @@ export default class Ready extends Event {
         })
     }
 
-    public async run(interaction: CommandInteraction | AutocompleteInteraction): Promise<void> {
+    public async run(interaction: CommandInteraction | AutocompleteInteraction | AutocompleteInteraction): Promise<void> {
         if (interaction instanceof CommandInteraction && interaction.type === InteractionType.ApplicationCommand) {
             const {commandName} = interaction
             const command = this.client.commands.get(commandName)
@@ -105,6 +104,14 @@ export default class Ready extends Event {
             } catch (error) {
                 this.client.logger.error(error);
                 await interaction.reply({ content: `Um erro ocorreu: \`${error}\`` });
+            }
+        } else if (interaction instanceof AutocompleteInteraction && interaction.type === InteractionType.ApplicationCommandAutocomplete) {
+            const cmd = this.client.commands.get(interaction.commandName)
+            if (!cmd) return;
+            try {
+                await cmd.autocomplete(this.client, interaction)
+            } catch (e) {
+                this.client.logger.error(e)
             }
         }
     }

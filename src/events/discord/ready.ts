@@ -9,5 +9,7 @@ export default class Ready extends Event {
 
     public async run(): Promise<void> {
         this.client.logger.info('Client is ready.')
+        const botoptions = {...this.client.user!}
+        await this.client.lavalink.init(botoptions).then(() => this.client.logger.info('Lavalink initialized!'))
     }
 }
